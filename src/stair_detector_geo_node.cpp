@@ -7,20 +7,38 @@
 
 StairDetectorGeo sdg;
 std::vector<cv::Point> bounding_box;
-void imageCallback(const sensor_msgs::ImageConstPtr& msg)
+cv::Mat rgb_image;
+cv::Mat depth_image;
+
+void rgbImageCallback(const sensor_msgs::ImageConstPtr& msg)
+{
+  ROS_INFO_ONCE("Recevied Image");
+  try
+  {
+    rgb_image = cv_bridge::toCvCopy(msg, "8UC3")->image;
+    sdg.drawBox(rgb_image, bounding_box);
+    cv::imshow("Result", rgb_image);
+    cv::waitKey(30);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    ROS_ERROR("Could not convert from '%s' to '8UC3'.", msg->encoding.c_str());
+  }
+}
+
+void depthImageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
   ROS_INFO_ONCE("Recevied Image");
   try
   {
     cv::Mat image = cv_bridge::toCvCopy(msg, "8UC1")->image;
     if (sdg.getStairs(image, bounding_box)) {
-      sdg.drawBox(image, bounding_box);
       std::cout << "Found  stiars" << std::endl;
     }else{
       std::cout << "Can't find stiars" << std::endl;
     }
-    cv::imshow("Result", image);
-    cv::waitKey(30);
+    // cv::imshow("Result", image);
+    // cv::waitKey(30);
   }
   catch (cv_bridge::Exception& e)
   {
@@ -40,7 +58,8 @@ int main(int argc, char **argv)
   param.fill_invalid = true;
   sdg.setParam(param);
   image_transport::ImageTransport it(nh);
-  image_transport::Subscriber sub = it.subscribe("image", 1, imageCallback);
+  image_transport::Subscriber sub_depth = it.subscribe("depth/image", 1, depthImageCallback);
+  image_transport::Subscriber sub_rgb = it.subscribe("rgb/image", 1, rgbImageCallback);
   ROS_INFO_ONCE("Stair detector waiting for images");
   ros::spin();
   cv::destroyWindow("Result");
