@@ -4,14 +4,18 @@ int main(int argc, char **argv) {
 	/// Load an image
 	cv::Mat src = cv::imread(argv[1], CV_8UC1);
 	// src.convertTo(src, CV_32F);
-	// contrast the depth image scale
 
-	double min, max;
-	cv::minMaxIdx(src, &min, &max);
-	cv::convertScaleAbs(src, src, 255 / max);
+	// contrast the depth image scale
+	// double min, max;
+	// cv::minMaxIdx(src, &min, &max);
+	// cv::convertScaleAbs(src, src, 255 / max);
 	
 	cv::Mat src_rgb;
 	cv::cvtColor(src, src_rgb, CV_GRAY2RGB);
+	double min, max;
+	cv::minMaxIdx(src_rgb, &min, &max);
+	cv::convertScaleAbs(src_rgb, src_rgb, 255 / max);
+	
 	StarDetectorGeoParams param;
 	param.debug = true;
 	// param.ignore_invalid = true;
@@ -21,6 +25,7 @@ int main(int argc, char **argv) {
 	std::vector<cv::Point> bounding_box;
 	sdg.getStairs(src, bounding_box);
 	sdg.drawBox(src_rgb, bounding_box);
+
 	imshow("Result1", src_rgb);
 
 	// change the color map of the image;

@@ -34,7 +34,7 @@ void depthImageCallback(const sensor_msgs::ImageConstPtr& msg)
     cv::Mat image = cv_bridge::toCvCopy(msg, "8UC1")->image;
     if (sdg.getStairs(image, bounding_box)) {
       std::cout << "Found  stiars" << std::endl;
-    }else{
+    } else {
       std::cout << "Can't find stiars" << std::endl;
     }
     // cv::imshow("Result", image);
