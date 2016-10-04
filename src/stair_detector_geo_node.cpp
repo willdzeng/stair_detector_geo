@@ -12,7 +12,7 @@ cv::Mat depth_image;
 
 void rgbImageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-  ROS_INFO_ONCE("Recevied Image");
+  ROS_INFO_ONCE("Recevied RGB Image");
   try
   {
     rgb_image = cv_bridge::toCvCopy(msg, "8UC3")->image;
@@ -28,7 +28,7 @@ void rgbImageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 void depthImageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
-  ROS_INFO_ONCE("Recevied Image");
+  ROS_INFO_ONCE("Recevied Depth Image");
   try
   {
     cv::Mat image = cv_bridge::toCvCopy(msg, "8UC1")->image;
@@ -55,6 +55,7 @@ int main(int argc, char **argv)
   cv::startWindowThread();
   StarDetectorGeoParams param;
   // param.ignore_invalid = false;
+  param.debug = false;
   param.fill_invalid = true;
   sdg.setParam(param);
   image_transport::ImageTransport it(nh);

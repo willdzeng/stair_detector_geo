@@ -10,9 +10,9 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 	if ( input_image.channels() == 1) {
 		// input_image.copyTo(src_gray_);
 		src_gray_ = input_image;
-		// double min, max;
-		// cv::minMaxIdx(src_gray_, &min, &max);
-		// cv::convertScaleAbs(src_gray_, src_gray_, 255 / max);
+		double min, max;
+		cv::minMaxIdx(src_gray_, &min, &max);
+		cv::convertScaleAbs(src_gray_, src_gray_, 255 / max);
 		src_gray_.convertTo(src_gray_, CV_8UC1);
 		if (param_.fill_invalid) {
 			fillByNearestNeighbour(src_gray_, src_gray_);
