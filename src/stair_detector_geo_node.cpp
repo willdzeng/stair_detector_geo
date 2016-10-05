@@ -6,10 +6,13 @@
 #include <stair_detector_geo/stair_detector_geo.h>
 
 StairDetectorGeo sdg;
-std::vector<cv::Point> bounding_box;
+std::vector<cv::Point> tmp_bounding_box;
+std::vector<cv::Point> show_bounding_box;
 // cv::Mat rgb_image;
 // cv::Mat depth_image;
 StarDetectorGeoParams param;
+bool stair_detected = false;
+int detected_count = 0;
 
 void rgbImageCallback(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -17,7 +20,9 @@ void rgbImageCallback(const sensor_msgs::ImageConstPtr& msg)
     try
     {
         cv::Mat rgb_image = cv_bridge::toCvCopy(msg, "8UC3")->image;
-        sdg.drawBox(rgb_image, bounding_box);
+        if (stair_detected) {
+            sdg.drawBox(rgb_image, show_bounding_box);
+        }
         cv::imshow("Result", rgb_image);
         cv::waitKey(30);
     }
@@ -33,9 +38,18 @@ void depthImageCallback(const sensor_msgs::ImageConstPtr& msg)
     try
     {
         cv::Mat depth_image = cv_bridge::toCvCopy(msg, "8UC1")->image;
-        if (sdg.getStairs(depth_image, bounding_box)) {
-            std::cout << "Found  stiars" << std::endl;
+        if (sdg.getStairs(depth_image, tmp_bounding_box)) {
+            detected_count++;
+            std::cout << "Found Potential Stiars" << std::endl;
+            if (detected_count > 10) {
+                stair_detected = true;
+                show_bounding_box = tmp_bounding_box;
+                std::cout << "Found  stiars" << std::endl;
+            }
         } else {
+            stair_detected = false;
+            detected_count = 0;
+            show_bounding_box.clear();
             std::cout << "Can't find stiars" << std::endl;
         }
     }
