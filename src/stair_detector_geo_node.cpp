@@ -54,8 +54,8 @@ int main(int argc, char **argv)
     cv::startWindowThread();
 
     // param.debug = false;
-    // param.fill_invalid = true;
-    param.ignore_invalid = true;
+    param.fill_invalid = false;
+    param.ignore_invalid = false;
     sdg.setParam(param);
     image_transport::ImageTransport it(nh);
     image_transport::Subscriber sub_depth = it.subscribe("depth/image", 1, depthImageCallback);

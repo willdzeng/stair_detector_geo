@@ -30,7 +30,7 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 	cannyEdgeDetection(src_gray, edge);
 	// sobelEdgeDetection(src_gray, edge_image);
 	// laplacianEdgeDetection(src_gray, edge_image);
-	cv::imshow("edge image", edge);
+	// cv::imshow("edge image", edge);
 	if (param_.ignore_invalid) {
 		ignoreInvalid(src_gray, edge);
 	}
@@ -739,12 +739,15 @@ void StairDetectorGeo::fillByNearestNeighbour(const cv::Mat& input_image, cv::Ma
 	// cv::Mat filled_image_tmp;
 	// filled_image_tmp = input_image.clone();
 	NeighbourFinder nf;
+	int count = 0;
 	for (int i = 0; i < input_image.rows; i++) {
 		for (int j = 0; j < input_image.cols; j++) {
 			if (input_image.at<uchar>(i, j) == 0) {
 				nf.start(j, i);
+				count = 0;
 				while (1) {
 					std::pair<int, int> pos = nf.next();
+					++count;
 					if (!isInbound(pos.first, pos.second, input_image)) {
 						continue;
 					}
@@ -752,6 +755,9 @@ void StairDetectorGeo::fillByNearestNeighbour(const cv::Mat& input_image, cv::Ma
 					unsigned char value = input_image.at<uchar>(pos.second, pos.first);
 					if (value == 0) {
 						continue;
+					}
+					if (count > 50){
+						break;
 					}
 					// using temperary image will cost a lot of time when the image has a lot of invalid pixel
 					// filled_image_tmp.at<uchar>(i, j) = value;
