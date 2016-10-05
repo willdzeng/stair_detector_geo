@@ -30,8 +30,8 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 	cannyEdgeDetection(src_gray, edge);
 	// sobelEdgeDetection(src_gray, edge_image);
 	// laplacianEdgeDetection(src_gray, edge_image);
-	cv::imshow("edge image", edge);
-	cv::imshow("depth", src_gray);
+	// cv::imshow("edge image", edge);
+	// cv::imshow("depth", src_gray);
 	if (param_.ignore_invalid) {
 		ignoreInvalid(src_gray, edge);
 	}

@@ -78,8 +78,8 @@ struct StarDetectorGeoParams
 	double canny_ratio = 3;
 	int canny_kernel_size = 3;
 	// hough transfrom
-	double hough_min_line_length = 40;
-	double hough_max_line_gap = 10; //20;
+	double hough_min_line_length = 30;
+	double hough_max_line_gap = 20; //20;
 	double hough_threshold = 50;
 
 	int hough_rho = 18, hough_theta = 1;
