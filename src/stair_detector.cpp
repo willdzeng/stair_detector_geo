@@ -18,8 +18,8 @@ int main(int argc, char **argv) {
 	
 	StarDetectorGeoParams param;
 	param.debug = true;
-	// param.ignore_invalid = true;
-	param.fill_invalid = true;
+	param.ignore_invalid = true;
+	// param.fill_invalid = true;
 	StairDetectorGeo sdg;
 	sdg.setParam(param);
 	std::vector<cv::Point> bounding_box;

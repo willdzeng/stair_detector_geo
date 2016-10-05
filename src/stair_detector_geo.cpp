@@ -4,18 +4,19 @@ StairDetectorGeo::StairDetectorGeo() {}
 
 bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Point>& bounding_box) {
 
-
+	std::vector<cv::Point> tmp_bounding_box;
 	time_t begin = time(NULL);
 	// cv::Mat src;
 	if ( input_image.channels() == 1) {
 		// input_image.copyTo(src_gray_);
-		src_gray_ = input_image;
+		src_gray_ = input_image.clone();
 
 		double min, max;
 		cv::minMaxIdx(src_gray_, &min, &max);
 		cv::convertScaleAbs(src_gray_, src_gray_, 255 / max);
-
+		// make sure that it actually has the formmat of 8UC1
 		src_gray_.convertTo(src_gray_, CV_8UC1);
+
 		if (param_.fill_invalid) {
 			fillByNearestNeighbour(src_gray_, src_gray_);
 		}
@@ -26,30 +27,36 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 	}
 	// std::cout << param_.canny_low_threshold << " " << param_.canny_ratio << " " << param_.canny_kernel_size << std::endl;
 
-	cv::Mat edge_image;
-	cannyEdgeDetection(src_gray_, edge_image);
+	
+	cannyEdgeDetection(src_gray_, edge_image_);
 	// sobelEdgeDetection(src_gray_, edge_image);
 	// laplacianEdgeDetection(src_gray_, edge_image);
+	// cv::imshow("Result", edge_image_);
+	
 	if (param_.ignore_invalid) {
-		ignoreInvalid(edge_image);
+		ignoreInvalid(src_gray_, edge_image_);
 	}
 
 	if (param_.debug) {
-		cv::imshow("edge image", edge_image);
+		cv::imshow("edge image", edge_image_);
 	}
 
 	Lines lines;
-	houghLine(edge_image, lines);
-	if (getBoundingBox(lines, bounding_box)) {
+	houghLine(edge_image_, lines);
+	// std::cout << "Finished hough line" << std::endl;
+
+	if (getBoundingBox(lines, tmp_bounding_box)) {
 		time_t end = time(NULL);
 		double second = difftime(end, begin);
 		if (param_.debug) {
 			std::cout << "Found Stiars Time used: " << second << std::endl;
 		}
+		bounding_box  = tmp_bounding_box;
 		return true;
 	} else {
 		// cv::imshow("Result", src_rgb_);
 		// std::cout << "There is not a stair" << std::endl;
+		bounding_box  = tmp_bounding_box;
 		return false;
 	}
 
@@ -279,19 +286,19 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	}
 
 	// draw the lines
-	cv::Mat tmp3;
-	src_rgb_.copyTo(tmp3);
-	drawLines(tmp3, merged_lines, cv::Scalar(0, 0, 255));
+	cv::Mat line_mark = cv::Mat::zeros(src_gray_.rows, src_gray_.cols, CV_8UC1);
+	// src_rgb_.copyTo(tmp3);
+	drawLines(line_mark, merged_lines, cv::Scalar(255, 255, 255));
 
 	// calculate the histogram of lines passing each row
 	std::vector<int> col_hist;
 	// int bin_num = 20;
-	for (int j = 0; j < tmp3.cols; j++) {
+	for (int j = 0; j < line_mark.cols; j++) {
 		int count = 0;
-		for (int i = 0; i < tmp3.rows; i++) {
-			cv::Vec3b intensity = tmp3.at<cv::Vec3b>(i, j);
+		for (int i = 0; i < line_mark.rows; i++) {
+			unsigned char intensity = line_mark.at<uchar>(i, j);
 			// check if the pixel is red
-			if (intensity[0] == 0 && intensity[1] == 0 && intensity[2] == 255) {
+			if (intensity == 255) {
 				count++;
 				// std::cout << intensity << std::endl;
 			}
@@ -313,7 +320,6 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 		src_rgb_.copyTo(tmp2);
 		drawLines(tmp2, filtered_lines, cv::Scalar(0, 0, 255));
 		cv::imshow("after filter before merge", tmp2);
-		cv::imshow("after filter after merge", tmp3);
 		std::cout << "Maximum Frequency Column is " << max_frequency_col << std::endl;
 	}
 
@@ -377,8 +383,11 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	}
 
 	if (param_.debug) {
-		cv::imshow("after filter after merge", tmp3);
+		cv::Mat tmp3;
+		src_rgb_.copyTo(tmp3);
+		drawLines(tmp3, merged_lines, cv::Scalar(0, 0, 255));
 		cv::rectangle(tmp3, p1, p2, cv::Scalar(255, 0, 0), 3, 8);
+		cv::imshow("after filter after merge", tmp3);
 	}
 
 	if (param_.debug) {
@@ -655,19 +664,36 @@ void StairDetectorGeo::mergeLines(const Lines &input_lines, Lines &merged_lines)
 	                    tmp_merge_lines.end());
 }
 
-void StairDetectorGeo::ignoreInvalid(cv::Mat& image) {
+void StairDetectorGeo::ignoreInvalid(const cv::Mat& input_image, cv::Mat& filter_image) {
 	// If the depth is 0(which is unknow), make it's surrounding edge zero also
-	for (int i = 0; i < src_gray_.rows; i++) {
-		for (int j = 0; j < src_gray_.cols; j++) {
-			if (src_gray_.at<uchar>(i, j) == 0) {
-				std::vector<cv::Vec2i> ids;
-				getNeighboorId(i, j, ids);
-				for (int k = 0; k < ids.size(); k++) {
-					image.at<uchar>(ids[k][0], ids[k][1]) = 0;
+	// std::cout << "Ignore Invalid" << std::endl;
+	NeighbourFinder nf;
+	for (int i = 0; i < input_image.rows; i++) {
+		for (int j = 0; j < input_image.cols; j++) {
+			if (input_image.at<uchar>(i, j) == 0) {
+
+				// std::vector<cv::Vec2i> ids;
+				// getNeighboorId(i, j, ids);
+				// for (int k = 0; k < ids.size(); k++) {
+				// 	// in bound check should be inside getNeighbour id
+				// 	// if (isInbound(ids[k][0], ids[k][1])) {
+				// 	filter_image.at<uchar>(ids[k][0], ids[k][1]) = 0;
+				// 	// }
+				// }
+
+				nf.start(i,j);
+				for (int k = 0; k < 8; k++){
+					std::pair<int,int> pos = nf.next();
+					if (isInbound(pos.first, pos.second, filter_image)) {
+						filter_image.at<uchar>(pos.first, pos.second) = 0;
+					}
 				}
+
 			}
 		}
 	}
+	return;
+	// std::cout << "Finished Ignoreing" << std::endl;
 }
 
 /**
@@ -723,10 +749,10 @@ void StairDetectorGeo::fillByNearestNeighbour(const cv::Mat& input_image, cv::Ma
 				nf.start(i, j);
 				while (1) {
 					std::pair<int, int> pos = nf.next();
-					if (!isInbound(pos.first, pos.second)) {
+					if (!isInbound(pos.first, pos.second, input_image)) {
 						continue;
 					}
-					int value = input_image.at<uchar>(pos.first, pos.second);
+					unsigned char value = input_image.at<uchar>(pos.first, pos.second);
 					if (value == 0) {
 						continue;
 					}
@@ -750,17 +776,17 @@ void StairDetectorGeo::fillByNearestNeighbour(const cv::Mat& input_image, cv::Ma
  *
  * @return     True if inbound, False otherwise.
  */
-bool StairDetectorGeo::isInbound(int x, int y) {
+bool StairDetectorGeo::isInbound(int x, int y, const cv::Mat& image) {
 	if (x < 0) {
 		return false;
 	}
 	if (y < 0) {
 		return false;
 	}
-	if (x > src_gray_.rows) {
+	if (x > image.rows) {
 		return false;
 	}
-	if (y > src_gray_.cols) {
+	if (y > image.cols) {
 		return false;
 	}
 	return true;

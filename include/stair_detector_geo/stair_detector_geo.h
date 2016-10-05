@@ -197,7 +197,7 @@ public:
 	bool getBoundingBox(const Lines &input_lines, std::vector<cv::Point>& bounding_box);
 
 private:
-	cv::Mat src_rgb_, src_gray_;
+	cv::Mat src_rgb_, src_gray_, edge_image_;
 	StarDetectorGeoParams param_;
 
 	/**
@@ -255,7 +255,7 @@ private:
 	 */
 	void mergeLines(const Lines &input_lines, Lines &merged_lines);
 
-	void ignoreInvalid(cv::Mat& edge);
+	void ignoreInvalid(const cv::Mat& input_image, cv::Mat& filter_image);
 
 	/**
 	 * @function CannyThreshold
@@ -270,6 +270,6 @@ private:
 
 	void fillByNearestNeighbour(const cv::Mat &image, cv::Mat& filled_image);
 
-	bool isInbound(int x, int y);
+	bool isInbound(int x, int y, const cv::Mat& image);
 
 }; // end of class StairDetectorGeo
