@@ -24,8 +24,8 @@ int main(int argc, char **argv) {
 	sdg.setParam(param);
 	std::vector<cv::Point> bounding_box;
 	sdg.getStairs(src, bounding_box);
+	std::cout << "Found Stairs" << std::endl;
 	sdg.drawBox(src_rgb, bounding_box);
-
 	imshow("Result1", src_rgb);
 
 	// change the color map of the image;

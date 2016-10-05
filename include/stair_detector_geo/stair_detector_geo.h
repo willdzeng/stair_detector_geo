@@ -79,7 +79,7 @@ struct StarDetectorGeoParams
 	int canny_kernel_size = 3;
 	// hough transfrom
 	double hough_min_line_length = 30;
-	double hough_max_line_gap = 20;
+	double hough_max_line_gap = 10; //20;
 	double hough_threshold = 50;
 
 	int hough_rho = 18, hough_theta = 1;
@@ -149,7 +149,7 @@ public:
 	 * @param[in]  image         The image
 	 * @param[in]  bounding_box  The bounding box
 	 */
-	void drawBox(cv::Mat image, std::vector<cv::Point> bounding_box);
+	void drawBox(cv::Mat& image, const std::vector<cv::Point>& bounding_box);
 
 
 	/**
@@ -194,12 +194,12 @@ public:
 	 *
 	 * @return     The bounding box.
 	 */
-	bool getBoundingBox(const Lines &input_lines, std::vector<cv::Point>& bounding_box);
+	bool getBoundingBox(const cv::Mat input_rgb_image, const Lines &input_lines, std::vector<cv::Point>& bounding_box);
 
 private:
-	cv::Mat src_rgb_, src_gray_, edge_image_;
+	// cv::Mat src_rgb_, src_gray_, edge_image_;
+	// cv::Mat debug_image1_, debug_image2_;
 	StarDetectorGeoParams param_;
-
 	/**
 	 * @brief      Gets the neighboor pixel identifier.
 	 *
@@ -209,7 +209,7 @@ private:
 	 *
 	 * @return     if it's success or not
 	 */
-	bool getNeighboorId(int row, int col, std::vector<cv::Vec2i> &ids);
+	bool getNeighbourId(int row, int col, std::vector<cv::Vec2i> &ids, const cv::Mat& input_image);
 
 
 	/**
@@ -232,7 +232,7 @@ private:
 	 */
 	bool isLineParallel(const Line &line1, const Line &line2);
 
-	typedef std::vector<std::vector<cv::Point>> MergePointsList;
+	typedef std::vector<std::vector<cv::Point> > MergePointsList;
 	/**
 	 * @brief      Get the merge list form the input lines, every line that can be
 	 *             merged will be put in merge point list, any line that can't be
@@ -253,7 +253,7 @@ private:
 	 * @param[in]  input_lines   The input XY lines
 	 * @param      merged_lines  The merged lines
 	 */
-	void mergeLines(const Lines &input_lines, Lines &merged_lines);
+	void mergeLines(const cv::Mat& input_image, const Lines &input_lines, Lines &merged_lines);
 
 	void ignoreInvalid(const cv::Mat& input_image, cv::Mat& filter_image);
 

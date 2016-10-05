@@ -3,49 +3,47 @@
 StairDetectorGeo::StairDetectorGeo() {}
 
 bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Point>& bounding_box) {
-
+	cv::Mat src_gray = input_image.clone();
+	cv::Mat src_rgb;
 	std::vector<cv::Point> tmp_bounding_box;
 	time_t begin = time(NULL);
-	// cv::Mat src;
-	if ( input_image.channels() == 1) {
-		// input_image.copyTo(src_gray_);
-		src_gray_ = input_image.clone();
 
+	if ( input_image.channels() == 1) {
 		double min, max;
-		cv::minMaxIdx(src_gray_, &min, &max);
-		cv::convertScaleAbs(src_gray_, src_gray_, 255 / max);
+		cv::minMaxIdx(src_gray, &min, &max);
+		cv::convertScaleAbs(src_gray, src_gray, 255 / max);
+
 		// make sure that it actually has the formmat of 8UC1
-		src_gray_.convertTo(src_gray_, CV_8UC1);
+		src_gray.convertTo(src_gray, CV_8UC1);
 
 		if (param_.fill_invalid) {
-			fillByNearestNeighbour(src_gray_, src_gray_);
+			fillByNearestNeighbour(src_gray, src_gray);
 		}
-		cv::cvtColor(src_gray_, src_rgb_, CV_GRAY2RGB);
+		cv::cvtColor(src_gray, src_rgb, CV_GRAY2RGB);
 	} else {
 		std::cout << "Must use GrayScale Depth image as input" << std::endl;
 		return false;
 	}
 	// std::cout << param_.canny_low_threshold << " " << param_.canny_ratio << " " << param_.canny_kernel_size << std::endl;
+	cv::Mat edge;
 
-	
-	cannyEdgeDetection(src_gray_, edge_image_);
-	// sobelEdgeDetection(src_gray_, edge_image);
-	// laplacianEdgeDetection(src_gray_, edge_image);
-	// cv::imshow("Result", edge_image_);
-	
+	cannyEdgeDetection(src_gray, edge);
+	// sobelEdgeDetection(src_gray, edge_image);
+	// laplacianEdgeDetection(src_gray, edge_image);
+	cv::imshow("edge image", edge);
 	if (param_.ignore_invalid) {
-		ignoreInvalid(src_gray_, edge_image_);
+		ignoreInvalid(src_gray, edge);
 	}
 
 	if (param_.debug) {
-		cv::imshow("edge image", edge_image_);
+		cv::imshow("edge image", edge);
 	}
 
 	Lines lines;
-	houghLine(edge_image_, lines);
+	houghLine(edge, lines);
 	// std::cout << "Finished hough line" << std::endl;
 
-	if (getBoundingBox(lines, tmp_bounding_box)) {
+	if (getBoundingBox(src_rgb, lines, tmp_bounding_box)) {
 		time_t end = time(NULL);
 		double second = difftime(end, begin);
 		if (param_.debug) {
@@ -54,9 +52,8 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 		bounding_box  = tmp_bounding_box;
 		return true;
 	} else {
-		// cv::imshow("Result", src_rgb_);
 		// std::cout << "There is not a stair" << std::endl;
-		bounding_box  = tmp_bounding_box;
+		bounding_box.clear();
 		return false;
 	}
 
@@ -108,7 +105,7 @@ void StairDetectorGeo::drawLinesRadius(cv::Mat &image, const Lines &lines, const
 	}
 }
 
-void StairDetectorGeo::drawBox(cv::Mat image, std::vector<cv::Point> bounding_box) {
+void StairDetectorGeo::drawBox(cv::Mat& image, const std::vector<cv::Point>& bounding_box) {
 	if (bounding_box.size() != 2) {
 		if (param_.debug) {
 			std::cout << "Can't draw boxes because the point size is not equal to 2" << std::endl;
@@ -256,15 +253,14 @@ void StairDetectorGeo::filterLinesBySlopeHist(const Lines& input_lines, Lines& f
  *
  * @return     The bounding box.
  */
-bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::Point>& bounding_box) {
+bool StairDetectorGeo::getBoundingBox(const cv::Mat input_rgb_image, const Lines &input_lines, std::vector<cv::Point>& bounding_box) {
+	bounding_box.clear();
 	if (input_lines.size() < 3) {
 		if (param_.debug) {
 			std::cout << "There is no stair because not much lines detected" << std::endl;
 		}
 		return false;
 	}
-
-	bounding_box.clear();
 
 	// step 1 filter lines by it's slope
 	Lines filtered_lines;
@@ -277,7 +273,7 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	}
 	// step 2 merge lines after filtering
 	Lines merged_lines;
-	mergeLines(filtered_lines, merged_lines);
+	mergeLines(input_rgb_image, filtered_lines, merged_lines);
 	if (merged_lines.size() < 3) {
 		if (param_.debug) {
 			std::cout << "There is no stair because not much lines detected after merge" << std::endl;
@@ -286,8 +282,8 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	}
 
 	// draw the lines
-	cv::Mat line_mark = cv::Mat::zeros(src_gray_.rows, src_gray_.cols, CV_8UC1);
-	// src_rgb_.copyTo(tmp3);
+	cv::Mat line_mark = cv::Mat::zeros(input_rgb_image.rows, input_rgb_image.cols, CV_8UC1);
+	// input_rgb_image.copyTo(tmp3);
 	drawLines(line_mark, merged_lines, cv::Scalar(255, 255, 255));
 
 	// calculate the histogram of lines passing each row
@@ -311,13 +307,13 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	int max_frequency_col = std::distance(col_hist.begin(), std::max_element(col_hist.begin(), col_hist.end()));
 
 	if (param_.debug) {
-		cv::imshow("depth", src_rgb_);
+		cv::imshow("depth", input_rgb_image);
 		cv::Mat tmp1;
-		src_rgb_.copyTo(tmp1);
+		input_rgb_image.copyTo(tmp1);
 		drawLines(tmp1, input_lines, cv::Scalar(0, 0, 255));
 		cv::imshow("before filter", tmp1);
 		cv::Mat tmp2;
-		src_rgb_.copyTo(tmp2);
+		input_rgb_image.copyTo(tmp2);
 		drawLines(tmp2, filtered_lines, cv::Scalar(0, 0, 255));
 		cv::imshow("after filter before merge", tmp2);
 		std::cout << "Maximum Frequency Column is " << max_frequency_col << std::endl;
@@ -327,7 +323,7 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	// visualizeHist(col_hist, 200, "column histogram");
 
 	// find out the left and right most
-	int left_most = src_rgb_.cols;
+	int left_most = input_rgb_image.cols;
 	int right_most = -1;
 	std::vector<int> valid_ids;  // store all the lines that contain the frequency
 	for (int i = 0; i < merged_lines.size(); i++) {
@@ -345,7 +341,7 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 		}
 	}
 	// find out the up and down most
-	int up_most = src_rgb_.rows;
+	int up_most = input_rgb_image.rows;
 	int down_most = -1;
 	for (int i = 0; i < valid_ids.size(); i++) {
 		int id = valid_ids[i];
@@ -384,7 +380,7 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 
 	if (param_.debug) {
 		cv::Mat tmp3;
-		src_rgb_.copyTo(tmp3);
+		input_rgb_image.copyTo(tmp3);
 		drawLines(tmp3, merged_lines, cv::Scalar(0, 0, 255));
 		cv::rectangle(tmp3, p1, p2, cv::Scalar(255, 0, 0), 3, 8);
 		cv::imshow("after filter after merge", tmp3);
@@ -393,13 +389,13 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	if (param_.debug) {
 		// show the final images
 		cv::Mat tmp4;
-		src_rgb_.copyTo(tmp4);
+		input_rgb_image.copyTo(tmp4);
 		// draw the bounding box
 		cv::rectangle(tmp4, p1, p2, cv::Scalar(255, 0, 0), 3, 8);
 		drawLines(tmp4, final_lines, cv::Scalar(0, 0, 255));
 		// plot the maximum frequency column
 		cv::Point p3(max_frequency_col, 0);
-		cv::Point p4(max_frequency_col, src_rgb_.rows);
+		cv::Point p4(max_frequency_col, input_rgb_image.rows);
 		cv::line(tmp4, p3, p4, cv::Scalar(0, 255, 255), 3, 8);
 		drawLinesSlope(tmp4, final_lines, cv::Scalar(255, 255, 0));
 		cv::imshow("Result", tmp4);
@@ -418,7 +414,7 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
 	}
 }
 /**
- * @brief      Gets the neighboor pixel identifier.
+ * @brief      Gets the Neighbour pixel identifier.
  *
  * @param[in]  row   The row
  * @param[in]  col   The col
@@ -426,21 +422,21 @@ bool StairDetectorGeo::getBoundingBox(const Lines &input_lines, std::vector<cv::
  *
  * @return     if it's success or not
  */
-bool StairDetectorGeo::getNeighboorId(int row, int col, std::vector<cv::Vec2i> &ids) {
-	if (src_rgb_.rows <= 0 || src_rgb_.cols <= 0) {
-		std::cout << "getNeighboorId: rows and cols is not setuped" << std::endl;
+bool StairDetectorGeo::getNeighbourId(int row, int col, std::vector<cv::Vec2i> &ids, const cv::Mat& input_image) {
+	if (input_image.rows <= 0 || input_image.cols <= 0) {
+		std::cout << "getNeighbourId: rows and cols is not setuped" << std::endl;
 		return false;
 	}
 	for (int i = -1; i < 2; i++) {
 		for (int j = -1; j < 2; j++) {
-			int x = row - i;
-			int y = col - j;
+			int x = col - i;
+			int y = row - j;
 			// ignore
-			if (x < 0 || y < 0 || x > src_rgb_.rows || y > src_rgb_.cols) {
+			if (x < 0 || y < 0 || x > input_image.cols || y > input_image.rows) {
 				continue;
 			}
 			// ignore itself
-			if (x == row && y == col) {
+			if (x == col && y == row) {
 				continue;
 			}
 			cv::Vec2i id(x, y);
@@ -601,7 +597,7 @@ void StairDetectorGeo::getMergePointList(const Lines &input_lines,
  * @param[in]  input_lines   The input XY lines
  * @param      merged_lines  The merged lines
  */
-void StairDetectorGeo::mergeLines(const Lines &input_lines, Lines &merged_lines) {
+void StairDetectorGeo::mergeLines(const cv::Mat& input_image, const Lines &input_lines, Lines &merged_lines) {
 	std::vector<std::vector<cv::Point>> merge_points_list;
 	getMergePointList(input_lines, merge_points_list, merged_lines);
 
@@ -644,7 +640,7 @@ void StairDetectorGeo::mergeLines(const Lines &input_lines, Lines &merged_lines)
 			// std::cout << min << " " << max << std::endl;
 			Line merged_line(origin[0] + min * dir[0], origin[1] + min * dir[1],
 			                 origin[0] + max * dir[0], origin[1] + max * dir[1]);
-			merged_line.calPixels(this->src_rgb_);
+			merged_line.calPixels(input_image);
 			tmp_merge_lines.push_back(merged_line);
 		}
 		// Any line in tmp_merge_lines that can't be merged will be put inside
@@ -681,11 +677,11 @@ void StairDetectorGeo::ignoreInvalid(const cv::Mat& input_image, cv::Mat& filter
 				// 	// }
 				// }
 
-				nf.start(i,j);
-				for (int k = 0; k < 8; k++){
-					std::pair<int,int> pos = nf.next();
+				nf.start(j, i);
+				for (int k = 0; k < 8; k++) {
+					std::pair<int, int> pos = nf.next();
 					if (isInbound(pos.first, pos.second, filter_image)) {
-						filter_image.at<uchar>(pos.first, pos.second) = 0;
+						filter_image.at<uchar>(pos.second, pos.first) = 0;
 					}
 				}
 
@@ -746,13 +742,14 @@ void StairDetectorGeo::fillByNearestNeighbour(const cv::Mat& input_image, cv::Ma
 	for (int i = 0; i < input_image.rows; i++) {
 		for (int j = 0; j < input_image.cols; j++) {
 			if (input_image.at<uchar>(i, j) == 0) {
-				nf.start(i, j);
+				nf.start(j, i);
 				while (1) {
 					std::pair<int, int> pos = nf.next();
 					if (!isInbound(pos.first, pos.second, input_image)) {
 						continue;
 					}
-					unsigned char value = input_image.at<uchar>(pos.first, pos.second);
+					// y is row, x is col
+					unsigned char value = input_image.at<uchar>(pos.second, pos.first);
 					if (value == 0) {
 						continue;
 					}
@@ -769,7 +766,7 @@ void StairDetectorGeo::fillByNearestNeighbour(const cv::Mat& input_image, cv::Ma
 }
 
 /**
- * @brief      Determines if a pixel coordinate inbound of src_gray_.
+ * @brief      Determines if a pixel coordinate inbound of image.
  *
  * @param[in]  x     x coordinate
  * @param[in]  y     y coordinate
@@ -783,10 +780,10 @@ bool StairDetectorGeo::isInbound(int x, int y, const cv::Mat& image) {
 	if (y < 0) {
 		return false;
 	}
-	if (x > image.rows) {
+	if (x >= image.cols) {
 		return false;
 	}
-	if (y > image.cols) {
+	if (y >= image.rows) {
 		return false;
 	}
 	return true;
