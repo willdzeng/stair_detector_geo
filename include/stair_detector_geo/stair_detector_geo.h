@@ -76,14 +76,14 @@ struct StairDetectorGeoParams
 	bool fill_invalid = false;
 	bool use_laplacian = false;
 	// canny
-	double canny_low_threshold = 20;
-	double canny_ratio = 3;
+	double canny_low_threshold = 40;
+	double canny_ratio = 10;
 	int    canny_kernel_size = 1;
 	// hough transfrom
-	double hough_min_line_length = 30; // pixel distance
-	double hough_max_line_gap = 20;   // pixel distance
-	double hough_threshold = 50;      //
-	int    hough_rho = 18;            //
+	double hough_min_line_length = 25; // pixel distance
+	double hough_max_line_gap = 15;   // pixel distance
+	double hough_threshold = 20;      //
+	int    hough_rho = 8;            //
 	double hough_theta = 1;           // angle
 	// filter by slope histogram
 	double filter_slope_hist_bin_width = 20;  // degree
@@ -94,7 +94,7 @@ struct StairDetectorGeoParams
 	double merge_max_angle_diff = 30; // degree
 	int    merge_close_count = 10; // number
 	// bounding box
-	int    minimum_line_num = 5;
+	int    minimum_line_num = 3;
 };
 
 

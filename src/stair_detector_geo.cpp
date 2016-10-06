@@ -735,7 +735,8 @@ void StairDetectorGeo::sobelEdgeDetection(const cv::Mat& input_image, cv::Mat &e
  * @param      edge  The edge
  */
 void StairDetectorGeo::laplacianEdgeDetection(const cv::Mat& input_image, cv::Mat &edge) {
-	cv::GaussianBlur( input_image, edge, cv::Size( 3, 3 ), 0 , 0);
+	// cv::GaussianBlur( input_image, edge, cv::Size( 3, 3 ), 0 , 0);
+	cv::blur(input_image, edge, cv::Size(3, 3));
 	cv::Laplacian( edge, edge, CV_8U, 3, 1, 0, cv::BORDER_DEFAULT );
 	cv::convertScaleAbs(edge, edge);
 }
