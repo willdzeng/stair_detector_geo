@@ -66,6 +66,11 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 	}
 }
 
+/**
+ * @brief      Sets the parameter. Also does some parameter pre-processing
+ *
+ * @param[in]  param  The parameter
+ */
 void StairDetectorGeo::setParam(const StairDetectorGeoParams& param) {
 	param_ = param;
 	param_.merge_max_angle_diff = param_.merge_max_angle_diff * PI / 180;

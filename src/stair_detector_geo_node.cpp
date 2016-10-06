@@ -65,32 +65,32 @@ void depthImageCallback(const sensor_msgs::ImageConstPtr& msg)
 
 void reconfigureCB(stair_detector_geo::StairDetectorGeoConfig &config, uint32_t level) {
         // high level bools
-    param.show_result = config.show_result;
-    param.debug = config.debug;
-    param.ignore_invalid = config.ignore_invalid;
-    param.fill_invalid = config.fill_invalid;
-    param.use_laplacian = config.use_laplacian;
+    param.show_result                   = config.show_result;
+    param.debug                         = config.debug;
+    param.ignore_invalid                = config.ignore_invalid;
+    param.fill_invalid                  = config.fill_invalid;
+    param.use_laplacian                 = config.use_laplacian;
     // canny
-    param.canny_low_threshold = config.canny_low_threshold;
-    param.canny_ratio = config.canny_ratio;
-    param.canny_kernel_size = config.canny_kernel_size;
+    param.canny_low_threshold           = config.canny_low_threshold;
+    param.canny_ratio                   = config.canny_ratio;
+    param.canny_kernel_size             = config.canny_kernel_size;
     // hough transfrom
-    param.hough_min_line_length = config.hough_min_line_length;
-    param.hough_max_line_gap = config.hough_max_line_gap;
-    param.hough_threshold = config.hough_threshold;
-    param.hough_rho = config.hough_rho;
-    param.hough_theta = config.hough_theta;
+    param.hough_min_line_length         = config.hough_min_line_length;
+    param.hough_max_line_gap            = config.hough_max_line_gap;
+    param.hough_threshold               = config.hough_threshold;
+    param.hough_rho                     = config.hough_rho;
+    param.hough_theta                   = config.hough_theta;
     // filter by slope histogram
-    param.filter_slope_hist_bin_width = config.filter_slope_hist_bin_width;
+    param.filter_slope_hist_bin_width   = config.filter_slope_hist_bin_width;
     // filter by hard slope
-    param.filter_slope_bandwidth = config.filter_slope_bandwidth;
+    param.filter_slope_bandwidth        = config.filter_slope_bandwidth;
     // merge parameters
-    param.merge_max_dist_diff = config.merge_max_dist_diff;
-    param.merge_max_angle_diff = config.merge_max_angle_diff;
-    param.merge_close_count = config.merge_close_count;
+    param.merge_max_dist_diff           = config.merge_max_dist_diff;
+    param.merge_max_angle_diff          = config.merge_max_angle_diff;
+    param.merge_close_count             = config.merge_close_count;
     // bounding box
-    param.minimum_line_num = config.minimum_line_num;
-    max_valid_detection         = config.max_valid_detection;
+    param.minimum_line_num              = config.minimum_line_num;
+    max_valid_detection                 = config.max_valid_detection;
     sdg.setParam(param);
 }
 

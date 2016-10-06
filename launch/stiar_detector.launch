@@ -1,8 +1,8 @@
 <launch>
-<arg name="camera_namespace" default="/camera"/>
-<node pkg="stair_detector_geo" type="stair_detector_geo_node" name="stair_detector_geo" output="screen" ns="$(arg camera_namespace)">
-	<remap from="depth/image" to="depth/image_rect_color"/>
-	<remap from="rgb/image" to="rgb/image_rect_color"/>
+<!-- <arg name="camera_namespace" default="/camera"/> -->
+<node pkg="stair_detector_geo" type="stair_detector_geo_node" name="stair_detector_geo" output="screen">
+	<remap from="depth/image" to="/camera/depth/image_rect_color"/>
+	<remap from="rgb/image" to="/camera/rgb/image_rect_color"/>
 </node>
 
 </launch>
