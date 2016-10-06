@@ -9,12 +9,18 @@ find_package(catkin REQUIRED
             cv_bridge
             image_transport
             camera_info_manager
+            dynamic_reconfigure
         )
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 # find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
 find_package(OpenCV REQUIRED)
+
+# dynamic reconfigure
+generate_dynamic_reconfigure_options(
+    cfg/StairDetectorGeo.cfg
+)
 
 include_directories(
     include
@@ -30,7 +36,7 @@ link_directories(${catkin_LIBRARY_DIRS})
 catkin_package(
     INCLUDE_DIRS include
     LIBRARIES 
-    CATKIN_DEPENDS
+    CATKIN_DEPENDS dynamic_reconfigure
 )
 
 add_library(stair_detector_geo src/stair_detector_geo.cpp)

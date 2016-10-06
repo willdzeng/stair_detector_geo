@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 	cv::minMaxIdx(src_rgb, &min, &max);
 	cv::convertScaleAbs(src_rgb, src_rgb, 255 / max);
 	
-	StarDetectorGeoParams param;
+	StairDetectorGeoParams param;
 	param.debug = true;
 	param.ignore_invalid = true;
 	// param.fill_invalid = true;

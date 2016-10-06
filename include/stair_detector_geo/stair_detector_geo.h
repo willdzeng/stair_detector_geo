@@ -67,31 +67,34 @@ public:
 };
 typedef std::vector<Line> Lines;
 
-struct StarDetectorGeoParams
+struct StairDetectorGeoParams
 {
+	// high level bools
 	bool show_result = false;
 	bool debug = false;
-	bool ignore_invalid = true;
+	bool ignore_invalid = false;
 	bool fill_invalid = false;
+	bool use_laplacian = false;
 	// canny
 	double canny_low_threshold = 20;
 	double canny_ratio = 3;
-	int canny_kernel_size = 3;
+	int    canny_kernel_size = 1;
 	// hough transfrom
-	double hough_min_line_length = 30;
-	double hough_max_line_gap = 20; //20;
-	double hough_threshold = 50;
-
-	int hough_rho = 18, hough_theta = 1;
-	// slope histogram
-	double slope_hist_bin_width = 20;  // degree
-
-	// merge parameter
-	int merge_pixel_distances = 20;
-	int merge_close_count = 10;
-	double merge_angle_interval = 30 * PI / 180;
+	double hough_min_line_length = 30; // pixel distance
+	double hough_max_line_gap = 20;   // pixel distance
+	double hough_threshold = 50;      //
+	int    hough_rho = 18;            //
+	double hough_theta = 1;           // angle
+	// filter by slope histogram
+	double filter_slope_hist_bin_width = 20;  // degree
+	// filter by hard slope
+	double filter_slope_bandwidth = 10; // angle
+	// merge parameters
+	double merge_max_dist_diff = 20; // pixel
+	double merge_max_angle_diff = 30; // degree
+	int    merge_close_count = 10; // number
 	// bounding box
-	int minimum_line_num = 5;
+	int    minimum_line_num = 5;
 };
 
 
@@ -114,7 +117,7 @@ public:
 	 *
 	 * @param[in]  param  The parameter
 	 */
-	void setParam(const StarDetectorGeoParams& param);
+	void setParam(const StairDetectorGeoParams& param);
 
 	/**
 	* @brief      Draws xy lines.
@@ -199,7 +202,7 @@ public:
 private:
 	// cv::Mat src_rgb_, src_gray_, edge_image_;
 	// cv::Mat debug_image1_, debug_image2_;
-	StarDetectorGeoParams param_;
+	StairDetectorGeoParams param_;
 	/**
 	 * @brief      Gets the neighboor pixel identifier.
 	 *

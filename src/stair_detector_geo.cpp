@@ -1,6 +1,10 @@
 #include "stair_detector_geo/stair_detector_geo.h"
 
-StairDetectorGeo::StairDetectorGeo() {}
+StairDetectorGeo::StairDetectorGeo() {
+	// run a empty set param to convert all the angle into radius
+	StairDetectorGeoParams param;
+	setParam(param);
+}
 
 bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Point>& bounding_box) {
 	cv::Mat src_gray = input_image.clone();
@@ -27,9 +31,12 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 	// std::cout << param_.canny_low_threshold << " " << param_.canny_ratio << " " << param_.canny_kernel_size << std::endl;
 	cv::Mat edge;
 
-	cannyEdgeDetection(src_gray, edge);
+	if (param_.use_laplacian) {
+		laplacianEdgeDetection(src_gray, edge);
+	} else {
+		cannyEdgeDetection(src_gray, edge);
+	}
 	// sobelEdgeDetection(src_gray, edge_image);
-	// laplacianEdgeDetection(src_gray, edge_image);
 	// cv::imshow("edge image", edge);
 	// cv::imshow("depth", src_gray);
 	if (param_.ignore_invalid) {
@@ -57,11 +64,21 @@ bool StairDetectorGeo::getStairs(const cv::Mat& input_image, std::vector<cv::Poi
 		bounding_box.clear();
 		return false;
 	}
-
 }
 
-void StairDetectorGeo::setParam(const StarDetectorGeoParams& param) {
+void StairDetectorGeo::setParam(const StairDetectorGeoParams& param) {
 	param_ = param;
+	param_.merge_max_angle_diff = param_.merge_max_angle_diff * PI / 180;
+	param_.filter_slope_bandwidth = param_.filter_slope_bandwidth * PI / 180;
+	param_.hough_theta = param_.hough_theta * PI / 180;
+	param_.filter_slope_hist_bin_width = param_.filter_slope_hist_bin_width * PI / 180;
+	param_.canny_kernel_size = param_.canny_kernel_size * 2 + 1;
+	if (param_.canny_kernel_size > 7) {
+		param_.canny_kernel_size = 7;
+	}
+	if (param_.canny_kernel_size < 1) {
+		param_.canny_kernel_size = 1;
+	}
 }
 
 /**
@@ -163,7 +180,7 @@ void StairDetectorGeo::houghLine(const cv::Mat &edge_image, Lines &lines) {
 	std::vector<cv::Vec4i> xy_lines;
 	HoughLinesP(edge_image, xy_lines,
 	            (double)param_.hough_rho / 10,
-	            (double)param_.hough_theta * CV_PI / 360,
+	            (double)param_.hough_theta,
 	            (int)	param_.hough_threshold,
 	            (double)param_.hough_min_line_length,
 	            (double)param_.hough_max_line_gap);
@@ -177,7 +194,7 @@ void StairDetectorGeo::houghLine(const cv::Mat &edge_image, Lines &lines) {
 
 void StairDetectorGeo::filterLinesBySlopeThreshold(const Lines& input_lines, Lines& filtered_lines ) {
 	double target_angle = 0;
-	double buff_angle = 10 * PI / 180;
+	double buff_angle = param_.filter_slope_bandwidth;
 
 	for (int i = 0; i < input_lines.size(); i++) {
 		if ( std::abs(input_lines[i].t - target_angle) < buff_angle ) {
@@ -191,7 +208,7 @@ void StairDetectorGeo::filterLinesBySlopeHist(const Lines& input_lines, Lines& f
 	std::vector<int> slope_hist;
 	std::vector<std::vector<int>> slope_hist_list;
 	// 10 degree
-	double bin_width = param_.slope_hist_bin_width * PI / 180.0;
+	double bin_width = param_.filter_slope_hist_bin_width;
 	int bin_num = PI / bin_width;
 
 	// initialize the histogram
@@ -457,10 +474,10 @@ bool StairDetectorGeo::getNeighbourId(int row, int col, std::vector<cv::Vec2i> &
  * @return     True if close, False otherwise.
  */
 bool StairDetectorGeo::isLineClose(const Line &line1, const Line &line2) {
-	if (cv::norm(line1.p1 - line2.p1) < param_.merge_pixel_distances ||
-	        cv::norm(line1.p1 - line2.p2) < param_.merge_pixel_distances ||
-	        cv::norm(line1.p2 - line2.p1) < param_.merge_pixel_distances ||
-	        cv::norm(line1.p2 - line2.p2) < param_.merge_pixel_distances) {
+	if (cv::norm(line1.p1 - line2.p1) < param_.merge_max_dist_diff ||
+	        cv::norm(line1.p1 - line2.p2) < param_.merge_max_dist_diff ||
+	        cv::norm(line1.p2 - line2.p1) < param_.merge_max_dist_diff ||
+	        cv::norm(line1.p2 - line2.p2) < param_.merge_max_dist_diff) {
 		return true;
 	}
 
@@ -469,7 +486,7 @@ bool StairDetectorGeo::isLineClose(const Line &line1, const Line &line2) {
 		for (int n = 0; n < line2.pixels_num; n++) {
 			// at leaset 10 pixel that are distance less than 5
 			double dist = cv::norm(line1.pixels[m] - line2.pixels[n]);
-			if (dist < param_.merge_pixel_distances) {
+			if (dist < param_.merge_max_dist_diff) {
 				count++;
 				if (count > param_.merge_close_count || count > line1.pixels_num || count > line2.pixels_num) {
 					// std::cout << line1 << " " << line2 <<" close" <<std::endl;
@@ -503,10 +520,10 @@ bool StairDetectorGeo::isLineParallel(const Line &line1, const Line &line2) {
 	// if (angle_diff < 0) {
 	// 	angle_diff += PI;
 	// }
-	if (dist_diff > param_.merge_pixel_distances) {
+	if (dist_diff > param_.merge_max_dist_diff) {
 		return false;
 	}
-	if (angle_diff > param_.merge_angle_interval) {
+	if (angle_diff > param_.merge_max_angle_diff) {
 		return false;
 	}
 	return true;
@@ -617,8 +634,7 @@ void StairDetectorGeo::mergeLines(const cv::Mat& input_image, const Lines &input
 			cv::Vec4f merged_vline;
 			// out put of fit line is (vx, vy, x0, y0), where (vx, vy) is a normalized
 			// vector collinear to the line and (x0, y0) is a point on the line
-			cv::fitLine(merge_points_list[i], merged_vline, CV_DIST_L2, 1.3, 0.01,
-			            0.01);
+			cv::fitLine(merge_points_list[i], merged_vline, CV_DIST_L2, 1.3, 0.01, 0.01);
 			std::vector<double> distances;  // distance is the distance from the point
 			// to the origin point
 			cv::Vec2f dir(merged_vline[0], merged_vline[1]);
@@ -668,16 +684,6 @@ void StairDetectorGeo::ignoreInvalid(const cv::Mat& input_image, cv::Mat& filter
 	for (int i = 0; i < input_image.rows; i++) {
 		for (int j = 0; j < input_image.cols; j++) {
 			if (input_image.at<uchar>(i, j) == 0) {
-
-				// std::vector<cv::Vec2i> ids;
-				// getNeighboorId(i, j, ids);
-				// for (int k = 0; k < ids.size(); k++) {
-				// 	// in bound check should be inside getNeighbour id
-				// 	// if (isInbound(ids[k][0], ids[k][1])) {
-				// 	filter_image.at<uchar>(ids[k][0], ids[k][1]) = 0;
-				// 	// }
-				// }
-
 				nf.start(j, i);
 				for (int k = 0; k < 8; k++) {
 					std::pair<int, int> pos = nf.next();
@@ -685,7 +691,6 @@ void StairDetectorGeo::ignoreInvalid(const cv::Mat& input_image, cv::Mat& filter
 						filter_image.at<uchar>(pos.second, pos.first) = 0;
 					}
 				}
-
 			}
 		}
 	}
@@ -757,7 +762,7 @@ void StairDetectorGeo::fillByNearestNeighbour(const cv::Mat& input_image, cv::Ma
 					if (value == 0) {
 						continue;
 					}
-					if (count > 50){
+					if (count > 50) {
 						break;
 					}
 					// using temperary image will cost a lot of time when the image has a lot of invalid pixel
