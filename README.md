@@ -23,7 +23,7 @@ Just run:
 ```
 rosrun rqt_reconfigure rqt_reconfigure
 ```
-## Demo Vedio
+## Demo Video
 https://youtu.be/QT97yNQZ-Wo
 
 ## Reference
