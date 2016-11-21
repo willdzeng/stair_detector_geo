@@ -23,6 +23,9 @@ Just run:
 ```
 rosrun rqt_reconfigure rqt_reconfigure
 ```
+## Demo Vedio
+https://youtu.be/QT97yNQZ-Wo
+
 ## Reference
 [Delmerico, Jeffrey A., et al. "Ascending stairway modeling from dense depth imagery for traversability analysis." Robotics and Automation (ICRA), 2013 IEEE International Conference on. IEEE, 2013.](
 http://web.eecs.umich.edu/~jjcorso/pubs/delmerico_ICRA2013_stairs.pdf)
